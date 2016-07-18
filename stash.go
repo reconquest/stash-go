@@ -196,7 +196,7 @@ type (
 	}
 
 	PullRequestResource struct {
-		Version     int    `json:"version,omitempty"`
+		Version     int    `json:"version"`
 		Title       string `json:"title,omitempty"`
 		Description string `json:"description,omitempty"`
 		// FromRef and ToRef should be PullRequestRef but there is interface{}

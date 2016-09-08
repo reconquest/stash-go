@@ -197,7 +197,7 @@ type (
 	}
 
 	PullRequestResource struct {
-		Version     int    `json:"version"`
+		Version     int    `json:"version,omitempty"`
 		Title       string `json:"title,omitempty"`
 		Description string `json:"description,omitempty"`
 		// FromRef and ToRef should be PullRequestRef but there is interface{}
@@ -448,7 +448,15 @@ func (client Client) GetTags(projectKey, repositorySlug string) (map[string]Tag,
 func (client Client) GetRepository(
 	projectKey, repositorySlug string,
 ) (Repository, error) {
-	data, err := client.request("GET", "/rest/api/1.0/projects/%s/repos/%s", nil, http.StatusOK)
+	data, err := client.request(
+		"GET",
+		fmt.Sprintf(
+			"/rest/api/1.0/projects/%s/repos/%s",
+			projectKey, repositorySlug,
+		),
+		nil,
+		http.StatusOK,
+	)
 	if err != nil {
 		return Repository{}, err
 	}
@@ -772,8 +780,7 @@ func (client Client) UpdatePullRequest(
 	data, err := client.request(
 		"PUT",
 		fmt.Sprintf(
-			"%s/rest/api/1.0/projects/%s/repos/%s/pull-requests/%s",
-			client.baseURL.String(),
+			"/rest/api/1.0/projects/%s/repos/%s/pull-requests/%s",
 			projectKey,
 			repositorySlug,
 			identifier,
@@ -821,7 +828,12 @@ func (client Client) GetRawFile(
 ) ([]byte, error) {
 	return client.request(
 		"GET",
-		"/projects/%s/repos/%s/browse/%s?at=%s&raw",
+		fmt.Sprintf(
+			"/projects/%s/repos/%s/browse/%s?at=%s&raw",
+			strings.ToLower(repositoryProjectKey),
+			strings.ToLower(repositorySlug),
+			filePath, branch,
+		),
 		nil,
 		http.StatusOK,
 	)

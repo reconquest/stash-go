@@ -1,3 +1,0 @@
-[submodule "vendor/github.com/ar6rt/retry"]
-	path = vendor/github.com/ar6rt/retry
-	url = https://github.com/ae6rt/retry

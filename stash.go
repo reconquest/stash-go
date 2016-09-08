@@ -292,7 +292,7 @@ func (client Client) CreateRepository(projectKey, projectSlug string) (Repositor
 }
 
 func (client Client) RenameRepository(projectKey, projectSlug, newSlug string) error {
-	payload := fmt.Sprintf(`{"project":{"key":"%s"}}`, newSlug)
+	payload := fmt.Sprintf(`{"name":"%s"}`, newSlug)
 
 	req, err := http.NewRequest(
 		"PUT",

@@ -1,4 +1,0 @@
-package: github.com/xoom/stash
-import:
-- package: github.com/ae6rt/retry
-  version: v2.0.0

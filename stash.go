@@ -257,7 +257,7 @@ func NewClient(userName, password string, baseURL *url.URL) Stash {
 }
 
 func (client Client) CreateRepository(
-	projectKey, projectSlug string,
+	projectKey, repositorySlug string,
 ) (Repository, error) {
 	data, err := client.request(
 		"POST", fmt.Sprintf(
@@ -267,7 +267,7 @@ func (client Client) CreateRepository(
 		struct {
 			Name string `json:"name"`
 			Scm  string `json:"scmId"`
-		}{projectSlug, "git"},
+		}{repositorySlug, "git"},
 		http.StatusCreated,
 	)
 	if err != nil {
@@ -282,7 +282,7 @@ func (client Client) CreateRepository(
 
 	return response, nil
 }
-func (client Client) MoveRepository(projectKey, projectSlug, newProjectKey string) error {
+func (client Client) MoveRepository(projectKey, repositorySlug, newProjectKey string) error {
 	payload := struct {
 		Project struct {
 			Key string `json:"key"`
@@ -304,10 +304,13 @@ func (client Client) MoveRepository(projectKey, projectSlug, newProjectKey strin
 	return nil
 }
 
-func (client Client) RemoveRepository(projectKey, projectSlug string) error {
+func (client Client) RemoveRepository(projectKey, repositorySlug string) error {
 	_, err := client.request(
 		"DELETE",
-		"/rest/api/1.0/projects/%s/repos/%s",
+		fmt.Sprintf(
+			"/rest/api/1.0/projects/%s/repos/%s",
+			projectKey, repositorySlug,
+		),
 		nil,
 		http.StatusCreated,
 	)
@@ -551,7 +554,7 @@ func (client Client) DeleteBranchRestriction(
 
 // GetPullRequests returns a list of pull requests for a project / slug.
 func (client Client) GetPullRequests(
-	projectKey, projectSlug, state string,
+	projectKey, repositorySlug, state string,
 ) ([]PullRequest, error) {
 	start := 0
 	pullRequests := make([]PullRequest, 0)
@@ -561,7 +564,7 @@ func (client Client) GetPullRequests(
 			"GET",
 			fmt.Sprintf(
 				"/rest/api/1.0/projects/%s/repos/%s/pull-requests?state=%s&start=%d&limit=%d",
-				projectKey, projectSlug, state, start, stashPageLimit,
+				projectKey, repositorySlug, state, start, stashPageLimit,
 			),
 			nil,
 			http.StatusOK,
@@ -590,13 +593,13 @@ func (client Client) GetPullRequests(
 // GetPullRequest returns a pull request for a project/slug with specified
 // identifier.
 func (client Client) GetPullRequest(
-	projectKey, projectSlug, identifier string,
+	projectKey, repositorySlug, identifier string,
 ) (PullRequest, error) {
 	data, err := client.request(
 		"GET",
 		fmt.Sprintf(
-			"%s/rest/api/1.0/projects/%s/repos/%s/pull-requests/%s",
-			projectKey, projectSlug, identifier,
+			"rest/api/1.0/projects/%s/repos/%s/pull-requests/%s",
+			projectKey, repositorySlug, identifier,
 		),
 		nil,
 		http.StatusOK,

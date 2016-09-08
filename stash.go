@@ -312,7 +312,7 @@ func (client Client) RemoveRepository(projectKey, repositorySlug string) error {
 			projectKey, repositorySlug,
 		),
 		nil,
-		http.StatusCreated,
+		http.StatusAccepted,
 	)
 	if err != nil {
 		return err

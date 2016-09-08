@@ -25,6 +25,7 @@ type (
 	Stash interface {
 		CreateRepository(projectKey, slug string) (Repository, error)
 		RenameRepository(projectKey, slug, newslug string) error
+		MoveRepository(projectKey, slug, newslug string) error
 		GetRepositories() (map[int]Repository, error)
 		GetBranches(projectKey, repositorySlug string) (map[string]Branch, error)
 		GetTags(projectKey, repositorySlug string) (map[string]Tag, error)
@@ -289,6 +290,48 @@ func (client Client) CreateRepository(projectKey, projectSlug string) (Repositor
 	}
 
 	return t, nil
+}
+func (client Client) MoveRepository(projectKey, projectSlug, newProjectKey string) error {
+	payload := fmt.Sprintf(`{"project":{"key":"%s"}}`, newProjectKey)
+
+	req, err := http.NewRequest(
+		"PUT",
+		fmt.Sprintf(
+			"%s/rest/api/1.0/projects/%s/repos/%s",
+			client.baseURL.String(),
+			projectKey,
+			projectSlug,
+		),
+		bytes.NewBuffer([]byte(payload)),
+	)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-type", "application/json")
+	req.SetBasicAuth(client.userName, client.password)
+
+	responseCode, _, err := consumeResponse(req)
+	if err != nil {
+		return err
+	}
+	if responseCode != http.StatusCreated {
+		var reason string = "unknown reason"
+		switch {
+		case responseCode == http.StatusBadRequest:
+			reason = "The repository was not renamed due to a validation error."
+		case responseCode == http.StatusUnauthorized:
+			reason = "The currently authenticated user has insufficient permissions to create a repository."
+		case responseCode == http.StatusNotFound:
+			reason = "The resource was not found. Does the project key exist?"
+		case responseCode == http.StatusConflict:
+			reason = "A repository with same name already exists."
+		}
+		return errorResponse{StatusCode: responseCode, Reason: reason}
+	}
+
+	return nil
 }
 
 func (client Client) RenameRepository(projectKey, projectSlug, newSlug string) error {

@@ -26,6 +26,7 @@ type (
 		MoveRepository(projectKey, slug, newslug string) error
 		RemoveRepository(projectKey, slug string) error
 		GetRepositories() (map[int]Repository, error)
+		GetProjectRepositories(projectKey string) (map[int]Repository, error)
 		GetBranches(projectKey, repositorySlug string) (map[string]Branch, error)
 		GetTags(projectKey, repositorySlug string) (map[string]Tag, error)
 		CreateBranchRestriction(projectKey, repositorySlug, branch, user string) (BranchRestriction, error)
@@ -342,6 +343,44 @@ func (client Client) RenameRepository(projectKey, repositorySlug, newSlug string
 	}
 
 	return nil
+}
+
+func (client Client) GetProjectRepositories(
+	projectKey string,
+) (map[int]Repository, error) {
+	start := 0
+	repositories := make(map[int]Repository)
+	morePages := true
+	for morePages {
+		data, err := client.request(
+			"GET",
+			fmt.Sprintf(
+				"/rest/api/1.0/projects/%s/repos?start=%d&limit=%d",
+				projectKey,
+				start, stashPageLimit,
+			),
+			nil,
+			http.StatusOK,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		var response Repositories
+		err = json.Unmarshal(data, &response)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, repo := range response.Repository {
+			repositories[repo.ID] = repo
+		}
+
+		morePages = !response.IsLastPage
+		start = response.NextPageStart
+	}
+
+	return repositories, nil
 }
 
 // GetRepositories returns a map of repositories indexed by repository URL.

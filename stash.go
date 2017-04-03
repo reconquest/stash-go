@@ -638,7 +638,7 @@ func (client Client) GetPullRequest(
 	data, err := client.request(
 		"GET",
 		fmt.Sprintf(
-			"rest/api/1.0/projects/%s/repos/%s/pull-requests/%s",
+			"/rest/api/1.0/projects/%s/repos/%s/pull-requests/%s",
 			projectKey, repositorySlug, identifier,
 		),
 		nil,

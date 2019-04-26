@@ -21,6 +21,7 @@ var Log *log.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lshortfile)
 
 type (
 	Stash interface {
+		CreateProject(projectKey string, projectName string) (Project, error)
 		CreateRepository(projectKey, slug string) (Repository, error)
 		RenameRepository(projectKey, slug, newslug string) error
 		MoveRepository(projectKey, slug, newslug string) error
@@ -255,6 +256,32 @@ func (e errorResponse) Error() string {
 
 func NewClient(userName, password string, baseURL *url.URL) Stash {
 	return Client{userName: userName, password: password, baseURL: baseURL}
+}
+
+func (client Client) CreateProject(
+	projectKey, projectName string, 
+) (Project, error) {
+	data, err := client.request(
+		"POST", fmt.Sprintf(
+			"/rest/api/1.0/projects/",
+			projectKey,
+		),
+		struct {
+			Key string `json:"key"`
+		}{projectKey},
+		http.StatusCreated,
+	)
+	if err != nil {
+		return Project{}, err
+	}
+
+	var response Project
+	err = json.Unmarshal(data, &response)
+	if err != nil {
+		return Project{}, err
+	}
+
+	return response, nil
 }
 
 func (client Client) CreateRepository(

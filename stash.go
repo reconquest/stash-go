@@ -21,7 +21,7 @@ var Log *log.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lshortfile)
 
 type (
 	Stash interface {
-		CreateProject(projectKey string, projectName string) (Project, error)
+		CreateProject(projectKey string) (Project, error)
 		CreateRepository(projectKey, slug string) (Repository, error)
 		RenameRepository(projectKey, slug, newslug string) error
 		MoveRepository(projectKey, slug, newslug string) error
@@ -259,12 +259,11 @@ func NewClient(userName, password string, baseURL *url.URL) Stash {
 }
 
 func (client Client) CreateProject(
-	projectKey, projectName string, 
+	projectKey string,
 ) (Project, error) {
 	data, err := client.request(
 		"POST", fmt.Sprintf(
 			"/rest/api/1.0/projects/",
-			projectKey,
 		),
 		struct {
 			Key string `json:"key"`

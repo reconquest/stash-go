@@ -8,8 +8,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
@@ -43,6 +45,9 @@ type (
 		GetCommit(projectKey, repositorySlug, commitHash string) (Commit, error)
 		GetCommits(projectKey, repositorySlug, commitSinceHash string, commitUntilHash string) (Commits, error)
 		CreateComment(projectKey, repositorySlug, pullRequest, text string) (Comment, error)
+		GetUPMToken() (string, error)
+		UninstallAddon(upmToken string, addonName string) error
+		InstallAddon(upmToken string, path string) error
 	}
 
 	Client struct {
@@ -309,6 +314,7 @@ func (client Client) CreateRepository(
 
 	return response, nil
 }
+
 func (client Client) MoveRepository(projectKey, repositorySlug, newProjectKey string) error {
 	payload := struct {
 		Project struct {
@@ -772,28 +778,48 @@ func (client Client) CreatePullRequest(
 	return response, nil
 }
 
-func (client *Client) request(
-	method, url string, payload interface{}, statuses ...int,
-) ([]byte, error) {
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return nil, err
+func (client *Client) getFullURL(url string) string {
+	return strings.TrimRight(client.baseURL.String(), "/") + url
+}
+
+func (client *Client) getRequest(method, url string, payload interface{}) (*http.Request, error) {
+	var buffer io.Reader
+	if payload != nil {
+		body, err := json.Marshal(payload)
+		if err != nil {
+			return nil, err
+		}
+
+		buffer = bytes.NewBuffer(body)
 	}
 
 	request, err := http.NewRequest(
 		method,
-		strings.TrimRight(client.baseURL.String(), "/")+url,
-		bytes.NewBuffer(body),
+		client.getFullURL(url),
+		buffer,
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	request.Header.Set("Accept", "application/json")
-	request.Header.Set("Content-type", "application/json")
+	if buffer != nil {
+		request.Header.Set("Accept", "application/json")
+		request.Header.Set("Content-type", "application/json")
+	}
 
 	if client.userName != "" && client.password != "" {
 		request.SetBasicAuth(client.userName, client.password)
+	}
+
+	return request, nil
+}
+
+func (client *Client) request(
+	method, url string, payload interface{}, statuses ...int,
+) ([]byte, error) {
+	request, err := client.getRequest(method, url, payload)
+	if err != nil {
+		return nil, err
 	}
 
 	status, data, err := consumeResponse(request)
@@ -953,6 +979,110 @@ func (client Client) GetCommits(
 	}
 
 	return commits, nil
+}
+
+func (client Client) GetUPMToken() (string, error) {
+	request, err := client.getRequest(
+		"GET", "/rest/plugins/1.0/?os_authType=basic", nil,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	response, err := httpClient.Do(request)
+	if err != nil {
+		return "", err
+	}
+
+	if response.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected status code: %v", response.StatusCode)
+	}
+
+	return response.Header.Get("upm-token"), nil
+}
+
+func (client Client) UninstallAddon(
+	token string, key string,
+) error {
+	request, err := client.getRequest(
+		"DELETE", fmt.Sprintf(
+			"/rest/plugins/1.0/%s-key",
+			key,
+		),
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	response, err := httpClient.Do(request)
+	if err != nil {
+		return err
+	}
+
+	if response.StatusCode != http.StatusNoContent && response.StatusCode != http.StatusNotFound {
+		return fmt.Errorf("unexpected status code: %v", response.StatusCode)
+	}
+
+	return nil
+}
+
+func (client Client) InstallAddon(
+	token string, path string,
+) error {
+	buffer := bytes.NewBuffer(nil)
+	writer := multipart.NewWriter(buffer)
+
+	err := writer.WriteField("url", "")
+	if err != nil {
+		return err
+	}
+
+	part, err := writer.CreateFormFile("plugin", path)
+	if err != nil {
+		return err
+	}
+
+	file, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(part, file)
+	if err != nil {
+		return err
+	}
+
+	err = writer.Close()
+	if err != nil {
+		return err
+	}
+
+	request, err := http.NewRequest(
+		"POST",
+		client.getFullURL("/rest/plugins/1.0/?token="+token),
+		buffer,
+	)
+	if err != nil {
+		return err
+	}
+
+	request.Header.Set("Content-Type", writer.FormDataContentType())
+
+	if client.userName != "" && client.password != "" {
+		request.SetBasicAuth(client.userName, client.password)
+	}
+
+	response, err := httpClient.Do(request)
+	if err != nil {
+		return err
+	}
+
+	if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusAccepted {
+		return fmt.Errorf("unexpected status code: %v", response.StatusCode)
+	}
+
+	return nil
 }
 
 func HasRepository(

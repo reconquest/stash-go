@@ -245,18 +245,9 @@ const (
 	stashUnexpectedStatus = "unexpected server status"
 )
 
-var (
-	httpTransport = &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-)
+var httpTransport = &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 
-var (
-	httpClient *http.Client = &http.Client{
-		Timeout:   10 * time.Second,
-		Transport: httpTransport,
-	}
-)
+var httpClient *http.Client = &http.Client{Timeout: 10 * time.Second, Transport: httpTransport}
 
 func (e errorResponse) Error() string {
 	return fmt.Sprintf("%s (%d)", e.Reason, e.StatusCode)
@@ -582,7 +573,6 @@ func (client Client) CreateBranchRestriction(
 func (client Client) GetBranchRestrictions(
 	projectKey, repositorySlug string,
 ) (BranchRestrictions, error) {
-
 	data, err := client.request(
 		"GET", fmt.Sprintf(
 			"/rest/branch-permissions/1.0/projects/%s/repos/%s/restricted",
@@ -593,7 +583,6 @@ func (client Client) GetBranchRestrictions(
 	)
 	if err != nil {
 		return BranchRestrictions{}, err
-
 	}
 
 	var branchRestrictions BranchRestrictions
@@ -609,7 +598,6 @@ func (client Client) GetBranchRestrictions(
 func (client Client) DeleteBranchRestriction(
 	projectKey, repositorySlug string, id int,
 ) error {
-
 	_, err := client.request(
 		"DELETE",
 		fmt.Sprintf(
@@ -621,7 +609,6 @@ func (client Client) DeleteBranchRestriction(
 	)
 	if err != nil {
 		return err
-
 	}
 
 	return nil
@@ -1130,7 +1117,7 @@ func (client *Client) waitAddonInstallation(task string) (string, error) {
 		}
 
 		if !status.Done {
-			time.Sleep(time.Second)
+			time.Sleep(time.Millisecond * 100)
 			continue
 		}
 

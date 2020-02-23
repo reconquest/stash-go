@@ -17,6 +17,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/reconquest/karma-go"
 )
 
 var Log *log.Logger = log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lshortfile)
@@ -47,7 +49,8 @@ type (
 		CreateComment(projectKey, repositorySlug, pullRequest, text string) (Comment, error)
 		GetUPMToken() (string, error)
 		UninstallAddon(upmToken string, addonName string) error
-		InstallAddon(upmToken string, path string) error
+		InstallAddon(upmToken string, path string) (string, error)
+		SetAddonLicense(addon string, license string) error
 	}
 
 	Client struct {
@@ -1029,33 +1032,33 @@ func (client Client) UninstallAddon(
 
 func (client Client) InstallAddon(
 	token string, path string,
-) error {
+) (string, error) {
 	buffer := bytes.NewBuffer(nil)
 	writer := multipart.NewWriter(buffer)
 
 	err := writer.WriteField("url", "")
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	part, err := writer.CreateFormFile("plugin", path)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	file, err := os.Open(path)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	_, err = io.Copy(part, file)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	err = writer.Close()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	request, err := http.NewRequest(
@@ -1064,7 +1067,7 @@ func (client Client) InstallAddon(
 		buffer,
 	)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	request.Header.Set("Content-Type", writer.FormDataContentType())
@@ -1075,11 +1078,145 @@ func (client Client) InstallAddon(
 
 	response, err := httpClient.Do(request)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusAccepted {
-		return fmt.Errorf("unexpected status code: %v", response.StatusCode)
+		return "", fmt.Errorf("unexpected status code: %v", response.StatusCode)
+	}
+
+	var descriptor struct {
+		Links struct {
+			Alternate string
+		}
+	}
+
+	err = json.NewDecoder(response.Body).Decode(&descriptor)
+	if err != nil {
+		return "", err
+	}
+
+	key, err := client.waitAddonInstallation(descriptor.Links.Alternate)
+	if err != nil {
+		return "", err
+	}
+
+	return key, nil
+}
+
+func (client *Client) waitAddonInstallation(task string) (string, error) {
+	for {
+		request, err := client.getRequest("GET", task, nil)
+		if err != nil {
+			return "", err
+		}
+
+		_, body, err := consumeResponse(request)
+		if err != nil {
+			return "", err
+		}
+
+		var status struct {
+			Links struct {
+				Result string
+			}
+
+			Done bool
+		}
+
+		err = json.Unmarshal(body, &status)
+		if err != nil {
+			return "", err
+		}
+
+		if !status.Done {
+			time.Sleep(time.Second)
+			continue
+		}
+
+		request, err = client.getRequest("GET", status.Links.Result, nil)
+		if err != nil {
+			return "", err
+		}
+
+		var result struct {
+			Key string
+		}
+
+		_, body, err = consumeResponse(request)
+		if err != nil {
+			return "", err
+		}
+
+		err = json.Unmarshal(body, &result)
+		if err != nil {
+			return "", err
+		}
+
+		return result.Key, nil
+	}
+}
+
+func (client Client) SetAddonLicense(addon string, license string) error {
+	request, err := client.getRequest(
+		"GET",
+		"/rest/plugins/1.0/"+addon+"-key/license",
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	_, body, err := consumeResponse(request)
+	if err != nil {
+		return karma.Format(
+			err,
+			"unable to get license status",
+		)
+	}
+
+	var status struct {
+		RawLicense string
+	}
+
+	err = json.Unmarshal(body, &status)
+	if err != nil {
+		return err
+	}
+
+	if status.RawLicense == license {
+		return nil
+	}
+
+	request, err = client.getRequest(
+		"PUT",
+		"/rest/plugins/1.0/"+addon+"-key/license",
+		map[string]string{
+			"rawLicense": license,
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	request.Header.Del("Accept")
+	request.Header.Set("Content-Type", "application/vnd.atl.plugins+json")
+
+	response, err := httpClient.Do(request)
+	if err != nil {
+		return err
+	}
+
+	if response.StatusCode != 200 {
+		reply, _ := ioutil.ReadAll(response.Body)
+
+		return karma.
+			Describe("status_code", response.StatusCode).
+			Describe("response", string(reply)).
+			Format(
+				err,
+				"unable to set license",
+			)
 	}
 
 	return nil

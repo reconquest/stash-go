@@ -72,9 +72,6 @@ func TestGetRepository(t *testing.T) {
 		if url.Path != "/rest/api/1.0/projects/PROJ/repos/slug" {
 			t.Fatalf("GetBranches() URL path expected to be /rest/api/1.0/projects/PROJ/repos/slug but found %s\n", url.Path)
 		}
-		if r.Header.Get("Accept") != "application/json" {
-			t.Fatalf("GetBranches() expected request Accept header to be application/json but found %s\n", r.Header.Get("Accept"))
-		}
 		if r.Header.Get("Authorization") != "Basic dTpw" {
 			t.Fatalf("Want  Basic dTpw but found %s\n", r.Header.Get("Authorization"))
 		}
@@ -113,7 +110,6 @@ func TestGetRepository404(t *testing.T) {
             }
         ]
     }`))
-
 	}))
 	defer testServer.Close()
 

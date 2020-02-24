@@ -40,9 +40,6 @@ func TestGetBranchRestrictions(t *testing.T) {
 		if url.Path != "/rest/branch-permissions/1.0/projects/PROJ/repos/slug/restricted" {
 			t.Fatalf("GetBranchPermissions() URL path expected to be /rest/branch-permissions/1.0/projects/PROJ/repos/slug/restricted but found %s\n", url.Path)
 		}
-		if r.Header.Get("Accept") != "application/json" {
-			t.Fatalf("GetBranchRestrictions() expected request Accept header to be application/json but found %s\n", r.Header.Get("Accept"))
-		}
 		if r.Header.Get("Authorization") != "Basic dTpw" {
 			t.Fatalf("Want Basic dTpw but found %s\n", r.Header.Get("Authorization"))
 		}

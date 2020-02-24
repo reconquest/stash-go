@@ -48,8 +48,11 @@ type (
 		GetCommits(projectKey, repositorySlug, commitSinceHash string, commitUntilHash string) (Commits, error)
 		CreateComment(projectKey, repositorySlug, pullRequest, text string) (Comment, error)
 		GetUPMToken() (string, error)
-		UninstallAddon(upmToken string, addonName string) error
+		GetAddon(upmToken string, addon string) (Addon, error)
 		InstallAddon(upmToken string, path string) (string, error)
+		UninstallAddon(upmToken string, addon string) error
+		EnableAddon(upmToken string, addon Addon) error
+		DisableAddon(upmToken string, addon Addon) error
 		SetAddonLicense(addon string, license string) error
 	}
 
@@ -57,7 +60,6 @@ type (
 		userName string
 		password string
 		baseURL  *url.URL
-		Stash
 	}
 
 	Page struct {
@@ -237,6 +239,50 @@ type (
 
 	Commits struct {
 		Commits []Commit `json:"values"`
+	}
+
+	Addon struct {
+		Links struct {
+			Self          string `json:"self"`
+			PluginSummary string `json:"plugin-summary"`
+			Modify        string `json:"modify"`
+			PluginIcon    string `json:"plugin-icon"`
+			PluginLogo    string `json:"plugin-logo"`
+			Manage        string `json:"manage"`
+			Delete        string `json:"delete"`
+		} `json:"links"`
+		Key              string `json:"key"`
+		Enabled          bool   `json:"enabled"`
+		EnabledByDefault bool   `json:"enabledByDefault"`
+		Version          string `json:"version"`
+		Description      string `json:"description"`
+		Name             string `json:"name"`
+		Modules          []struct {
+			Key         string `json:"key"`
+			CompleteKey string `json:"completeKey"`
+			Links       struct {
+				Self   string `json:"self"`
+				Plugin string `json:"plugin"`
+			} `json:"links"`
+			Enabled          bool   `json:"enabled"`
+			Optional         bool   `json:"optional"`
+			Name             string `json:"name,omitempty"`
+			RecognisableType bool   `json:"recognisableType"`
+			Broken           bool   `json:"broken"`
+			Description      string `json:"description,omitempty"`
+		} `json:"modules"`
+		UserInstalled           bool `json:"userInstalled"`
+		Optional                bool `json:"optional"`
+		UnrecognisedModuleTypes bool `json:"unrecognisedModuleTypes"`
+		Unloadable              bool `json:"unloadable"`
+		Static                  bool `json:"static"`
+		UsesLicensing           bool `json:"usesLicensing"`
+		Remotable               bool `json:"remotable"`
+		Vendor                  struct {
+			Name            string `json:"name"`
+			MarketplaceLink string `json:"marketplaceLink"`
+			Link            string `json:"link"`
+		} `json:"vendor"`
 	}
 )
 
@@ -1209,6 +1255,79 @@ func (client Client) SetAddonLicense(addon string, license string) error {
 	return nil
 }
 
+func (client Client) GetAddon(upmToken, key string) (Addon, error) {
+	request, err := client.getRequest(
+		"GET", fmt.Sprintf(
+			"/rest/plugins/1.0/%s-key",
+			key,
+		),
+		nil,
+	)
+	if err != nil {
+		return Addon{}, err
+	}
+
+	// request.Header.Set("Accept", "application/json")
+
+	_, body, err := consumeResponse(request)
+	if err != nil {
+		return Addon{}, karma.Format(
+			err,
+			"unable to get addon",
+		)
+	}
+
+	var result Addon
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		return Addon{}, err
+	}
+
+	return result, nil
+}
+
+func (client Client) DisableAddon(
+	token string, addon Addon,
+) error {
+	addon.Enabled = false
+	return client.putAddon(token, addon)
+}
+
+func (client Client) EnableAddon(
+	token string, addon Addon,
+) error {
+	addon.Enabled = true
+	return client.putAddon(token, addon)
+}
+
+func (client Client) putAddon(
+	token string, addon Addon,
+) error {
+	request, err := client.getRequest(
+		"PUT", fmt.Sprintf(
+			"/rest/plugins/1.0/%s-key",
+			addon.Key,
+		),
+		addon,
+	)
+	if err != nil {
+		return err
+	}
+
+	request.Header.Set("Content-Type", "application/vnd.atl.plugins.plugin+json")
+
+	response, err := httpClient.Do(request)
+	if err != nil {
+		return err
+	}
+
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: %v", response.StatusCode)
+	}
+
+	return nil
+}
+
 func HasRepository(
 	repositories map[int]Repository,
 	url string,
@@ -1265,7 +1384,11 @@ func consumeResponse(req *http.Request) (int, []byte, error) {
 			}
 			return response.StatusCode, data, errors.New(strings.Join(messages, " "))
 		} else {
-			return response.StatusCode, nil, err
+			return response.StatusCode, nil, fmt.Errorf(
+				"status code: %d; unable to read error: %s",
+				response.StatusCode,
+				err,
+			)
 		}
 	}
 

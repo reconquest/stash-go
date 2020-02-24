@@ -8,8 +8,7 @@ import (
 	"testing"
 )
 
-var (
-	tags string = `
+var tags string = `
 {
    "isLastPage" : true,
    "filter" : null,
@@ -32,7 +31,6 @@ var (
    "size" : 7
 }
 `
-)
 
 func TestGetTags(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -42,9 +40,6 @@ func TestGetTags(t *testing.T) {
 		url := *r.URL
 		if url.Path != "/rest/api/1.0/projects/PRJ/repos/widge/tags" {
 			t.Fatalf("Want /rest/api/1.0/projects/PRJ/repos/widge/tags but found %s\n", url.Path)
-		}
-		if r.Header.Get("Accept") != "application/json" {
-			t.Fatalf("Want application/json but found %s\n", r.Header.Get("Accept"))
 		}
 		if r.Header.Get("Authorization") != "Basic dTpw" {
 			t.Fatalf("Want  Basic dTpw but found %s\n", r.Header.Get("Authorization"))

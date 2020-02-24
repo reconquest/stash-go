@@ -16,9 +16,6 @@ func TestDeleteBranchRestriction(t *testing.T) {
 		if url.Path != "/rest/branch-permissions/1.0/projects/PROJ/repos/slug/restricted/1" {
 			t.Fatalf("DeleteBranchRestrictions() URL path expected to be /rest/branch-permissions/1.0/projects/PROJ/repos/slug/restricted/1 but found %s\n", url.Path)
 		}
-		if r.Header.Get("Accept") != "application/json" {
-			t.Fatalf("DeleteBranchRestrictions() expected request Accept header to be application/json but found %s\n", r.Header.Get("Accept"))
-		}
 		if r.Header.Get("Authorization") != "Basic dTpw" {
 			t.Fatalf("Want Basic dTpw but found %s\n", r.Header.Get("Authorization"))
 		}

@@ -16,9 +16,6 @@ func TestGetCommit(t *testing.T) {
 		if url.Path != "/rest/api/1.0/projects/PROJ/repos/slug/commits/6782bf94782450a4e6a0d548e4c803692ca38b94" {
 			t.Fatalf("Want /rest/api/1.0/projects/PROJ/repos/slug/commits/6782bf94782450a4e6a0d548e4c803692ca38b94 but found %s\n", url.Path)
 		}
-		if r.Header.Get("Accept") != "application/json" {
-			t.Fatalf("Want application/json but found %s\n", r.Header.Get("Accept"))
-		}
 		if r.Header.Get("Authorization") != "Basic dTpw" {
 			t.Fatalf("Want Basic dTpw but found %s\n", r.Header.Get("Authorization"))
 		}
@@ -63,7 +60,6 @@ func TestGetCommit(t *testing.T) {
 	url, _ := url.Parse(testServer.URL)
 	stashClient := NewClient("u", "p", url)
 	commit, err := stashClient.GetCommit("PROJ", "slug", "6782bf94782450a4e6a0d548e4c803692ca38b94")
-
 	if err != nil {
 		t.Fatalf("Not expecting error: %v\n", err)
 	}

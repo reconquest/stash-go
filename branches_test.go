@@ -8,8 +8,7 @@ import (
 	"testing"
 )
 
-var (
-	branches string = `
+var branches string = `
 {
    "isLastPage" : true,
    "filter" : null,
@@ -44,7 +43,6 @@ var (
    "size" : 7
 }
 `
-)
 
 func TestGetBranches(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -54,9 +52,6 @@ func TestGetBranches(t *testing.T) {
 		url := *r.URL
 		if url.Path != "/rest/api/1.0/projects/PRJ/repos/widge/branches" {
 			t.Fatalf("GetBranches() URL path expected to be /rest/api/1.0/projects/PRJ/repos/widge/branches but found %s\n", url.Path)
-		}
-		if r.Header.Get("Accept") != "application/json" {
-			t.Fatalf("GetBranches() expected request Accept header to be application/json but found %s\n", r.Header.Get("Accept"))
 		}
 		if r.Header.Get("Authorization") != "Basic dTpw" {
 			t.Fatalf("Want  Basic dTpw but found %s\n", r.Header.Get("Authorization"))
@@ -92,9 +87,6 @@ func TestGetBranches500(t *testing.T) {
 		if url.Path != "/rest/api/1.0/projects/PRJ/repos/widge/branches" {
 			t.Fatalf("GetBranches() URL path expected to be /rest/api/1.0/projects/PRJ/repos/widge/branches but found %s\n", url.Path)
 		}
-		if r.Header.Get("Accept") != "application/json" {
-			t.Fatalf("GetBranches() expected request Accept header to be application/json but found %s\n", r.Header.Get("Accept"))
-		}
 		if r.Header.Get("Authorization") != "Basic dTpw" {
 			t.Fatalf("Want  Basic dTpw but found %s\n", r.Header.Get("Authorization"))
 		}
@@ -108,7 +100,6 @@ func TestGetBranches500(t *testing.T) {
             }
         ]
     }`))
-
 	}))
 	defer testServer.Close()
 

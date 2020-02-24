@@ -8,8 +8,7 @@ import (
 	"testing"
 )
 
-var (
-	repos string = `
+var repos string = `
 {
    "nextPageStart" : 44,
    "isLastPage" : true,
@@ -177,7 +176,6 @@ var (
    "start" : 0
 }
 `
-)
 
 func TestGetRepositories(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -187,9 +185,6 @@ func TestGetRepositories(t *testing.T) {
 		url := *r.URL
 		if url.Path != "/rest/api/1.0/repos" {
 			t.Fatalf("GetRepositories() URL path expected to be /rest/api/1.0/repos but found %s\n", url.Path)
-		}
-		if r.Header.Get("Accept") != "application/json" {
-			t.Fatalf("GetRepositories() expected request Accept header to be application/json but found %s\n", r.Header.Get("Accept"))
 		}
 		if r.Header.Get("Authorization") != "Basic dTpw" {
 			t.Fatalf("Want  Basic dTpw but found %s\n", r.Header.Get("Authorization"))
@@ -224,7 +219,6 @@ func TestGetRepositories(t *testing.T) {
 			t.Fatalf("Wanted slug==%s for key %d but found %s\n", slug, id, repositories[id].Slug)
 		}
 	}
-
 }
 
 func TestGetRepositories500(t *testing.T) {
@@ -235,9 +229,6 @@ func TestGetRepositories500(t *testing.T) {
 		url := *r.URL
 		if url.Path != "/rest/api/1.0/repos" {
 			t.Fatalf("GetRepositories() URL path expected to be /rest/api/1.0/repos but found %s\n", url.Path)
-		}
-		if r.Header.Get("Accept") != "application/json" {
-			t.Fatalf("GetRepositories() expected request Accept header to be application/json but found %s\n", r.Header.Get("Accept"))
 		}
 		w.WriteHeader(500)
 		w.Write([]byte(`{

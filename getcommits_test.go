@@ -26,9 +26,6 @@ func TestGetCommits(t *testing.T) {
 		if url.Query()["limit"][0] != "1000" {
 			t.Fatalf("Want limit=1000 but found %s\n", url.Query()["limit"])
 		}
-		if r.Header.Get("Accept") != "application/json" {
-			t.Fatalf("Want application/json but found %s\n", r.Header.Get("Accept"))
-		}
 		if r.Header.Get("Authorization") != "Basic dTpw" {
 			t.Fatalf("Want Basic dTpw but found %s\n", r.Header.Get("Authorization"))
 		}
@@ -106,7 +103,6 @@ func TestGetCommits(t *testing.T) {
 	url, _ := url.Parse(testServer.URL)
 	stashClient := NewClient("u", "p", url)
 	commits, err := stashClient.GetCommits("PROJ", "slug", "6782bf94782450a4e6a0d548e4c803692ca38b94", "38b94f94782450a4e6a0d548e4c803692ca6782b")
-
 	if err != nil {
 		t.Fatalf("Not expecting error: %v\n", err)
 	}

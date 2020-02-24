@@ -1,3 +1,4 @@
 *.out
 *.log
 vendor/
+/stash.test

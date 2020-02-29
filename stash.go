@@ -43,6 +43,7 @@ type (
 		GetRawFile(projectKey, repositorySlug, branch, filePath string) ([]byte, error)
 		CreatePullRequest(projectKey, repositorySlug, title, description, fromRef, toRef string, reviewers []string) (PullRequest, error)
 		UpdatePullRequest(projectKey, repositorySlug, identifier string, version int, title, description, toRef string, reviewers []string) (PullRequest, error)
+		MergePullRequest(projectKey, repositorySlug, identifier string, version int) (*MergeResult, error)
 		DeleteBranch(projectKey, repositorySlug, branchName string) error
 		GetCommit(projectKey, repositorySlug, commitHash string) (Commit, error)
 		GetCommits(projectKey, repositorySlug, commitSinceHash string, commitUntilHash string) (Commits, error)
@@ -159,6 +160,7 @@ type (
 		CreatedDate int64      `json:"createdDate"`
 		UpdatedDate int64      `json:"updatedDate"`
 		Reviewers   []Reviewer `json:"reviewers"`
+		Author      Author     `json:"author"`
 	}
 
 	Comment struct {
@@ -166,7 +168,24 @@ type (
 	}
 
 	Ref struct {
-		DisplayID string `json:"displayId"`
+		ID           string     `json:"id"`
+		LatestCommit string     `json:"latestCommit"`
+		DisplayID    string     `json:"displayId"`
+		Repository   Repository `json:"repository"`
+	}
+
+	MergeResult struct {
+		PullRequest
+
+		Errors []struct {
+			Conflicted    bool
+			ExceptionName string
+			Message       string
+			Vetoes        []struct {
+				DetailedMessage string
+				SummaryMessage  string
+			}
+		}
 	}
 
 	errorResponse struct {
@@ -186,10 +205,16 @@ type (
 	// Pull Request Types
 
 	User struct {
-		Name string `json:"name"`
+		Name        string `json:"name"`
+		Email       string `json:"emailAddress"`
+		DisplayName string `json:"displayName"`
 	}
 
 	Reviewer struct {
+		User User `json:"user"`
+	}
+
+	Author struct {
 		User User `json:"user"`
 	}
 
@@ -838,6 +863,8 @@ func (client *Client) getRequest(method, url string, payload interface{}) (*http
 		return nil, err
 	}
 
+	request.Header.Set("X-Atlassian-Token", "no-check")
+
 	if buffer != nil {
 		request.Header.Set("Accept", "application/json")
 		request.Header.Set("Content-type", "application/json")
@@ -930,6 +957,54 @@ func (client Client) UpdatePullRequest(
 	}
 
 	return response, nil
+}
+
+func (client Client) MergePullRequest(
+	projectKey string,
+	repositorySlug string,
+	identifier string,
+	version int,
+) (*MergeResult, error) {
+	request, err := client.getRequest(
+		"POST",
+		fmt.Sprintf(
+			"/rest/api/1.0/projects/%s/repos/%s/pull-requests/%s/merge",
+			projectKey,
+			repositorySlug,
+			identifier,
+		),
+		struct {
+			Version int `json:"version"`
+		}{version},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := httpClient.Do(request)
+	if err != nil {
+		return nil, err
+	}
+
+	switch response.StatusCode {
+	case http.StatusOK, http.StatusConflict:
+		// ok
+	default:
+		return nil, karma.Format(
+			err,
+			"unexpected status code: %d",
+			response.StatusCode,
+		)
+	}
+
+	var status MergeResult
+
+	err = json.NewDecoder(response.Body).Decode(&status)
+	if err != nil {
+		return nil, err
+	}
+
+	return &status, nil
 }
 
 func (client Client) DeleteBranch(

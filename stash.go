@@ -88,6 +88,7 @@ type (
 	}
 
 	Project struct {
+		ID  int    `json:"id"`
 		Key string `json:"key"`
 	}
 

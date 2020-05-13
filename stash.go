@@ -55,6 +55,9 @@ type (
 		EnableAddon(upmToken string, addon Addon) error
 		DisableAddon(upmToken string, addon Addon) error
 		SetAddonLicense(addon string, license string) error
+		CreateUser(name, password, displayName, email string) (User, error)
+		GrantRepositoryUserPermission(projectKey, repositorySlug, user, permission string) error
+		RevokeRepositoryUserPermission(projectKey, repositorySlug, user string) error
 	}
 
 	Client struct {
@@ -208,6 +211,7 @@ type (
 	User struct {
 		Name        string `json:"name"`
 		Email       string `json:"emailAddress"`
+		Password    string `json:"password,omitempty"`
 		DisplayName string `json:"displayName"`
 	}
 
@@ -379,6 +383,31 @@ func (client Client) CreateRepository(
 	}
 
 	return response, nil
+}
+
+func (client Client) CreateUser(
+	name, password, displayName, email string,
+) (User, error) {
+	payload := url.Values{}
+	payload.Set("name", name)
+	payload.Set("password", password)
+	payload.Set("displayName", displayName)
+	payload.Set("emailAddress", email)
+	_, err := client.request(
+		"POST", "/rest/api/1.0/admin/users?"+payload.Encode(),
+		nil,
+		http.StatusNoContent,
+	)
+	if err != nil {
+		return User{}, err
+	}
+
+	return User{
+		Name:        name,
+		Password:    password,
+		DisplayName: displayName,
+		Email:       email,
+	}, nil
 }
 
 func (client Client) MoveRepository(projectKey, repositorySlug, newProjectKey string) error {
@@ -1469,6 +1498,39 @@ func consumeResponse(req *http.Request) (int, []byte, error) {
 	}
 
 	return response.StatusCode, data, nil
+}
+
+func (client Client) GrantRepositoryUserPermission(
+	projectKey, repositorySlug, user, permission string,
+) error {
+	payload := url.Values{}
+	payload.Set("name", user)
+	payload.Set("permission", permission)
+	_, err := client.request(
+		"PUT", fmt.Sprintf(
+			"/rest/api/1.0/projects/%s/repos/%s/permissions/users?%s",
+			projectKey, repositorySlug, payload.Encode(),
+		),
+		nil,
+		http.StatusNoContent,
+	)
+
+	return err
+}
+
+func (client Client) RevokeRepositoryUserPermission(
+	projectKey, repositorySlug, user string,
+) error {
+	_, err := client.request(
+		"DELETE", fmt.Sprintf(
+			"/rest/api/1.0/projects/%s/repos/%s/permissions/users?name=%s",
+			projectKey, repositorySlug, user,
+		),
+		nil,
+		http.StatusNoContent,
+	)
+
+	return err
 }
 
 // SshUrl extracts the SSH-based URL from the repository metadata.

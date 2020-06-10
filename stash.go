@@ -1243,8 +1243,12 @@ func (client Client) InstallAddon(
 }
 
 func (client *Client) waitAddonInstallation(task string) (string, error) {
+	trim := func(uri string) string {
+		return strings.TrimPrefix(uri, strings.TrimRight(client.baseURL.Path, "/"))
+	}
+
 	for {
-		request, err := client.getRequest("GET", task, nil)
+		request, err := client.getRequest("GET", trim(task), nil)
 		if err != nil {
 			return "", err
 		}
@@ -1272,7 +1276,7 @@ func (client *Client) waitAddonInstallation(task string) (string, error) {
 			continue
 		}
 
-		request, err = client.getRequest("GET", status.Links.Result, nil)
+		request, err = client.getRequest("GET", trim(status.Links.Result), nil)
 		if err != nil {
 			return "", err
 		}

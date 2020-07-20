@@ -1277,17 +1277,31 @@ func (client *Client) waitAddonInstallation(task string) (string, error) {
 				Result string
 			}
 
+			Error struct {
+				Code string
+			}
+
 			Done bool
 		}
 
 		err = json.Unmarshal(body, &status)
 		if err != nil {
-			return "", err
+			return "", karma.
+				Describe("request", "GET "+trim(task)).
+				Describe("response", string(body)).
+				Format(err, "unable to decode response body")
 		}
 
 		if !status.Done {
 			time.Sleep(time.Millisecond * 100)
 			continue
+		}
+
+		if status.Error.Code != "" {
+			return "", fmt.Errorf(
+				"bitbucket returned an error: %s; full response: %s",
+				status.Error.Code, string(body),
+			)
 		}
 
 		request, err = client.getRequest("GET", trim(status.Links.Result), nil)
@@ -1306,7 +1320,10 @@ func (client *Client) waitAddonInstallation(task string) (string, error) {
 
 		err = json.Unmarshal(body, &result)
 		if err != nil {
-			return "", err
+			return "", karma.
+				Describe("request", "GET "+trim(status.Links.Result)).
+				Describe("response", string(body)).
+				Format(err, "unable to decode response body")
 		}
 
 		return result.Key, nil

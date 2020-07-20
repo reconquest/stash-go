@@ -41,20 +41,22 @@ type (
 		GetPullRequests(projectKey, repositorySlug, state string) ([]PullRequest, error)
 		GetPullRequest(projectKey, repositorySlug, identifier string) (PullRequest, error)
 		GetRawFile(projectKey, repositorySlug, branch, filePath string) ([]byte, error)
-		CreatePullRequest(projectKey, repositorySlug, title, description, fromRef, toRef string, reviewers []string) (PullRequest, error)
-		UpdatePullRequest(projectKey, repositorySlug, identifier string, version int, title, description, toRef string, reviewers []string) (PullRequest, error)
+		CreatePullRequest(projectKey, repositorySlug, title, description, fromRef, toRef string,
+			reviewers []string) (PullRequest, error)
+		UpdatePullRequest(projectKey, repositorySlug, identifier string, version int,
+			title, description, toRef string, reviewers []string) (PullRequest, error)
 		MergePullRequest(projectKey, repositorySlug, identifier string, version int) (*MergeResult, error)
 		DeleteBranch(projectKey, repositorySlug, branchName string) error
 		GetCommit(projectKey, repositorySlug, commitHash string) (Commit, error)
-		GetCommits(projectKey, repositorySlug, commitSinceHash string, commitUntilHash string) (Commits, error)
+		GetCommits(projectKey, repositorySlug, commitSinceHash, commitUntilHash string) (Commits, error)
 		CreateComment(projectKey, repositorySlug, pullRequest, text string) (Comment, error)
 		GetUPMToken() (string, error)
-		GetAddon(upmToken string, addon string) (Addon, error)
-		InstallAddon(upmToken string, path string) (string, error)
-		UninstallAddon(upmToken string, addon string) error
+		GetAddon(upmToken, addon string) (Addon, error)
+		InstallAddon(upmToken, path string) (string, error)
+		UninstallAddon(upmToken, addon string) error
 		EnableAddon(upmToken string, addon Addon) error
 		DisableAddon(upmToken string, addon Addon) error
-		SetAddonLicense(addon string, license string) error
+		SetAddonLicense(addon, license string) error
 		CreateUser(name, password, displayName, email string) (User, error)
 		GrantRepositoryUserPermission(projectKey, repositorySlug, user, permission string) error
 		RevokeRepositoryUserPermission(projectKey, repositorySlug, user string) error
@@ -1143,7 +1145,7 @@ func (client Client) GetUPMToken() (string, error) {
 }
 
 func (client Client) UninstallAddon(
-	token string, key string,
+	token, key string,
 ) error {
 	request, err := client.getRequest(
 		"DELETE", fmt.Sprintf(
@@ -1169,7 +1171,7 @@ func (client Client) UninstallAddon(
 }
 
 func (client Client) InstallAddon(
-	token string, path string,
+	token, path string,
 ) (string, error) {
 	buffer := bytes.NewBuffer(nil)
 	writer := multipart.NewWriter(buffer)
@@ -1229,9 +1231,21 @@ func (client Client) InstallAddon(
 		}
 	}
 
-	err = json.NewDecoder(response.Body).Decode(&descriptor)
+	defer response.Body.Close()
+	data, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return "", err
+		return "", karma.Format(
+			err,
+			"unable to read response body",
+		)
+	}
+
+	err = json.Unmarshal(data, &descriptor)
+	if err != nil {
+		return "", karma.Describe("response", string(data)).Format(
+			err,
+			"unable to unmarshal JSON response",
+		)
 	}
 
 	key, err := client.waitAddonInstallation(descriptor.Links.Alternate)
@@ -1299,7 +1313,7 @@ func (client *Client) waitAddonInstallation(task string) (string, error) {
 	}
 }
 
-func (client Client) SetAddonLicense(addon string, license string) error {
+func (client Client) SetAddonLicense(addon, license string) error {
 	request, err := client.getRequest(
 		"GET",
 		"/rest/plugins/1.0/"+addon+"-key/license",

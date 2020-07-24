@@ -30,6 +30,7 @@ type (
 		RenameRepository(projectKey, slug, newslug string) error
 		MoveRepository(projectKey, slug, newslug string) error
 		RemoveRepository(projectKey, slug string) error
+		ForkRepository(projectKey, slug string, forkSlug string) (*Repository, error)
 		GetRepositories() (map[int]Repository, error)
 		GetProjectRepositories(projectKey string) (map[int]Repository, error)
 		GetBranches(projectKey, repositorySlug string) (map[string]Branch, error)
@@ -1566,6 +1567,39 @@ func (client Client) RevokeRepositoryUserPermission(
 	)
 
 	return err
+}
+
+func (client Client) ForkRepository(
+	projectKey string,
+	repositorySlug string,
+	forkSlug string,
+) (*Repository, error) {
+	response, err := client.request(
+		"POST",
+		fmt.Sprintf(
+			"/rest/api/1.0/projects/%s/repos/%s",
+			projectKey,
+			repositorySlug,
+		),
+		struct {
+			Slug string `json:"slug"`
+		}{
+			Slug: forkSlug,
+		},
+		http.StatusCreated,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var fork Repository
+
+	err = json.Unmarshal(response, &fork)
+	if err != nil {
+		return nil, err
+	}
+
+	return &fork, nil
 }
 
 // SshUrl extracts the SSH-based URL from the repository metadata.

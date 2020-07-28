@@ -1572,7 +1572,7 @@ func (client Client) RevokeRepositoryUserPermission(
 func (client Client) ForkRepository(
 	projectKey string,
 	repositorySlug string,
-	forkSlug string,
+	forkName string,
 ) (*Repository, error) {
 	response, err := client.request(
 		"POST",
@@ -1582,9 +1582,9 @@ func (client Client) ForkRepository(
 			repositorySlug,
 		),
 		struct {
-			Slug string `json:"slug"`
+			Name string `json:"name"`
 		}{
-			Slug: forkSlug,
+			Name: forkName,
 		},
 		http.StatusCreated,
 	)

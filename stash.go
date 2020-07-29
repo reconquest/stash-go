@@ -30,7 +30,7 @@ type (
 		RenameRepository(projectKey, slug, newslug string) error
 		MoveRepository(projectKey, slug, newslug string) error
 		RemoveRepository(projectKey, slug string) error
-		ForkRepository(projectKey, slug string, forkSlug string) (*Repository, error)
+		ForkRepository(projectKey, slug, forkSlug string) (*Repository, error)
 		GetRepositories() (map[int]Repository, error)
 		GetProjectRepositories(projectKey string) (map[int]Repository, error)
 		GetBranches(projectKey, repositorySlug string) (map[string]Branch, error)
@@ -94,8 +94,9 @@ type (
 	}
 
 	Project struct {
-		ID  int    `json:"id"`
-		Key string `json:"key"`
+		ID   int    `json:"id"`
+		Key  string `json:"key"`
+		Name string `json:"name"`
 	}
 
 	Links struct {

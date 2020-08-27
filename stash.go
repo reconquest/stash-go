@@ -42,8 +42,7 @@ type (
 		GetPullRequests(projectKey, repositorySlug, state string) ([]PullRequest, error)
 		GetPullRequest(projectKey, repositorySlug, identifier string) (PullRequest, error)
 		GetRawFile(projectKey, repositorySlug, branch, filePath string) ([]byte, error)
-		CreatePullRequest(projectKey, repositorySlug, title, description, fromRef, toRef string,
-			reviewers []string) (PullRequest, error)
+		CreatePullRequest(title, description string, fromRef, toRef PullRequestRef, reviewers []string) (PullRequest, error)
 		UpdatePullRequest(projectKey, repositorySlug, identifier string, version int,
 			title, description, toRef string, reviewers []string) (PullRequest, error)
 		MergePullRequest(projectKey, repositorySlug, identifier string, version int) (*MergeResult, error)
@@ -818,7 +817,8 @@ func (client Client) CreateComment(
 
 // CreatePullRequest creates a pull request between branches.
 func (client Client) CreatePullRequest(
-	projectKey, repositorySlug, title, description, fromRef, toRef string,
+	title, description string,
+	fromRef, toRef PullRequestRef,
 	reviewers []string,
 ) (PullRequest, error) {
 	var users []Reviewer
@@ -831,31 +831,15 @@ func (client Client) CreatePullRequest(
 	payload := PullRequestResource{
 		Title:       title,
 		Description: description,
-		FromRef: PullRequestRef{
-			Id: fromRef,
-			Repository: PullRequestRepository{
-				Slug: repositorySlug,
-				Project: PullRequestProject{
-					Key: projectKey,
-				},
-			},
-		},
-		ToRef: PullRequestRef{
-			Id: toRef,
-			Repository: PullRequestRepository{
-				Slug: repositorySlug,
-				Project: PullRequestProject{
-					Key: projectKey,
-				},
-			},
-		},
-		Reviewers: users,
+		FromRef:     fromRef,
+		ToRef:       toRef,
+		Reviewers:   users,
 	}
 
 	data, err := client.request(
 		"POST", fmt.Sprintf(
 			"/rest/api/1.0/projects/%s/repos/%s/pull-requests",
-			projectKey, repositorySlug,
+			toRef.Repository.Project.Key, toRef.Repository.Slug,
 		),
 		payload,
 		http.StatusCreated,

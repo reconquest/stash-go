@@ -33,23 +33,50 @@ type (
 		ForkRepository(projectKey, slug, forkSlug string) (*Repository, error)
 		GetRepositories() (map[int]Repository, error)
 		GetProjectRepositories(projectKey string) (map[int]Repository, error)
-		GetBranches(projectKey, repositorySlug string) (map[string]Branch, error)
+		GetBranches(
+			projectKey, repositorySlug string,
+		) (map[string]Branch, error)
 		GetTags(projectKey, repositorySlug string) (map[string]Tag, error)
-		CreateBranchRestriction(projectKey, repositorySlug, branch, user string) (BranchRestriction, error)
-		GetBranchRestrictions(projectKey, repositorySlug string) (BranchRestrictions, error)
+		CreateBranchRestriction(
+			projectKey, repositorySlug, branch, user string,
+		) (BranchRestriction, error)
+		GetBranchRestrictions(
+			projectKey, repositorySlug string,
+		) (BranchRestrictions, error)
 		DeleteBranchRestriction(projectKey, repositorySlug string, id int) error
 		GetRepository(projectKey, repositorySlug string) (Repository, error)
-		GetPullRequests(projectKey, repositorySlug, state string) ([]PullRequest, error)
-		GetPullRequest(projectKey, repositorySlug, identifier string) (PullRequest, error)
-		GetRawFile(projectKey, repositorySlug, branch, filePath string) ([]byte, error)
-		CreatePullRequest(title, description string, fromRef, toRef PullRequestRef, reviewers []string) (PullRequest, error)
-		UpdatePullRequest(projectKey, repositorySlug, identifier string, version int,
-			title, description, toRef string, reviewers []string) (PullRequest, error)
-		MergePullRequest(projectKey, repositorySlug, identifier string, version int) (*MergeResult, error)
+		GetPullRequests(
+			projectKey, repositorySlug, state string,
+		) ([]PullRequest, error)
+		GetPullRequest(
+			projectKey, repositorySlug, identifier string,
+		) (PullRequest, error)
+		GetRawFile(
+			projectKey, repositorySlug, branch, filePath string,
+		) ([]byte, error)
+		CreatePullRequest(
+			title, description string,
+			fromRef, toRef PullRequestRef,
+			reviewers []string,
+		) (PullRequest, error)
+		UpdatePullRequest(
+			projectKey, repositorySlug, identifier string,
+			version int,
+			title, description, toRef string,
+			reviewers []string,
+		) (PullRequest, error)
+		MergePullRequest(
+			projectKey, repositorySlug, identifier string,
+			version int,
+		) (*MergeResult, error)
 		DeleteBranch(projectKey, repositorySlug, branchName string) error
 		GetCommit(projectKey, repositorySlug, commitHash string) (Commit, error)
-		GetCommits(projectKey, repositorySlug, commitSinceHash, commitUntilHash string) (Commits, error)
-		CreateComment(projectKey, repositorySlug, pullRequest, text string) (Comment, error)
+		GetCommits(
+			projectKey, repositorySlug, commitSinceHash, commitUntilHash string,
+		) (Commits, error)
+		CreateComment(
+			projectKey, repositorySlug, pullRequest, text string,
+		) (Comment, error)
 		GetUPMToken() (string, error)
 		GetAddon(upmToken, addon string) (Addon, error)
 		InstallAddon(upmToken, path string) (string, error)
@@ -58,8 +85,12 @@ type (
 		DisableAddon(upmToken string, addon Addon) error
 		SetAddonLicense(addon, license string) error
 		CreateUser(name, password, displayName, email string) (User, error)
-		GrantRepositoryUserPermission(projectKey, repositorySlug, user, permission string) error
-		RevokeRepositoryUserPermission(projectKey, repositorySlug, user string) error
+		GrantRepositoryUserPermission(
+			projectKey, repositorySlug, user, permission string,
+		) error
+		RevokeRepositoryUserPermission(
+			projectKey, repositorySlug, user string,
+		) error
 	}
 
 	Client struct {
@@ -156,18 +187,18 @@ type (
 
 	PullRequest struct {
 		ID          int        `id:"closed"`
-		Version     int        `json:"version"`
-		Closed      bool       `json:"closed"`
-		Open        bool       `json:"open"`
-		State       string     `json:"state"`
-		Title       string     `json:"title"`
-		Description string     `json:"description"`
-		FromRef     Ref        `json:"fromRef"`
-		ToRef       Ref        `json:"toRef"`
-		CreatedDate int64      `json:"createdDate"`
-		UpdatedDate int64      `json:"updatedDate"`
-		Reviewers   []Reviewer `json:"reviewers"`
-		Author      Author     `json:"author"`
+		Version     int        `            json:"version"`
+		Closed      bool       `            json:"closed"`
+		Open        bool       `            json:"open"`
+		State       string     `            json:"state"`
+		Title       string     `            json:"title"`
+		Description string     `            json:"description"`
+		FromRef     Ref        `            json:"fromRef"`
+		ToRef       Ref        `            json:"toRef"`
+		CreatedDate int64      `            json:"createdDate"`
+		UpdatedDate int64      `            json:"updatedDate"`
+		Reviewers   []Reviewer `            json:"reviewers"`
+		Author      Author     `            json:"author"`
 	}
 
 	Comment struct {
@@ -413,7 +444,9 @@ func (client Client) CreateUser(
 	}, nil
 }
 
-func (client Client) MoveRepository(projectKey, repositorySlug, newProjectKey string) error {
+func (client Client) MoveRepository(
+	projectKey, repositorySlug, newProjectKey string,
+) error {
 	payload := struct {
 		Project struct {
 			Key string `json:"key"`
@@ -453,7 +486,9 @@ func (client Client) RemoveRepository(projectKey, repositorySlug string) error {
 	return nil
 }
 
-func (client Client) RenameRepository(projectKey, repositorySlug, newSlug string) error {
+func (client Client) RenameRepository(
+	projectKey, repositorySlug, newSlug string,
+) error {
 	_, err := client.request(
 		"PUT",
 		fmt.Sprintf(
@@ -550,7 +585,9 @@ func (client Client) GetRepositories() (map[int]Repository, error) {
 }
 
 // GetBranches returns a map of branches indexed by branch display name for the given repository.
-func (client Client) GetBranches(projectKey, repositorySlug string) (map[string]Branch, error) {
+func (client Client) GetBranches(
+	projectKey, repositorySlug string,
+) (map[string]Branch, error) {
 	start := 0
 	branches := make(map[string]Branch)
 	morePages := true
@@ -583,7 +620,9 @@ func (client Client) GetBranches(projectKey, repositorySlug string) (map[string]
 }
 
 // GetTags returns a map of tags indexed by tag display name for the given repository.
-func (client Client) GetTags(projectKey, repositorySlug string) (map[string]Tag, error) {
+func (client Client) GetTags(
+	projectKey, repositorySlug string,
+) (map[string]Tag, error) {
 	start := 0
 	tags := make(map[string]Tag)
 	morePages := true
@@ -730,7 +769,11 @@ func (client Client) GetPullRequests(
 			"GET",
 			fmt.Sprintf(
 				"/rest/api/1.0/projects/%s/repos/%s/pull-requests?state=%s&start=%d&limit=%d",
-				projectKey, repositorySlug, state, start, stashPageLimit,
+				projectKey,
+				repositorySlug,
+				state,
+				start,
+				stashPageLimit,
 			),
 			nil,
 			http.StatusOK,
@@ -861,7 +904,10 @@ func (client *Client) getFullURL(url string) string {
 	return strings.TrimRight(client.baseURL.String(), "/") + url
 }
 
-func (client *Client) getRequest(method, url string, payload interface{}) (*http.Request, error) {
+func (client *Client) getRequest(
+	method, url string,
+	payload interface{},
+) (*http.Request, error) {
 	var buffer io.Reader
 	if payload != nil {
 		body, err := json.Marshal(payload)
@@ -1092,7 +1138,10 @@ func (client Client) GetCommits(
 		"GET",
 		fmt.Sprintf(
 			"/rest/api/1.0/projects/%s/repos/%s/commits?since=%s&until=%s&limit=1000",
-			projectKey, repositorySlug, commitSinceHash, commitUntilHash,
+			projectKey,
+			repositorySlug,
+			commitSinceHash,
+			commitUntilHash,
 		),
 		nil,
 		http.StatusOK,
@@ -1149,7 +1198,8 @@ func (client Client) UninstallAddon(
 		return err
 	}
 
-	if response.StatusCode != http.StatusNoContent && response.StatusCode != http.StatusNotFound {
+	if response.StatusCode != http.StatusNoContent &&
+		response.StatusCode != http.StatusNotFound {
 		return fmt.Errorf("unexpected status code: %v", response.StatusCode)
 	}
 
@@ -1207,7 +1257,8 @@ func (client Client) InstallAddon(
 		return "", err
 	}
 
-	if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusAccepted {
+	if response.StatusCode != http.StatusOK &&
+		response.StatusCode != http.StatusAccepted {
 		return "", fmt.Errorf("unexpected status code: %v", response.StatusCode)
 	}
 
@@ -1244,9 +1295,13 @@ func (client Client) InstallAddon(
 
 func (client *Client) waitAddonInstallation(task string) (string, error) {
 	trim := func(uri string) string {
-		return strings.TrimPrefix(uri, strings.TrimRight(client.baseURL.Path, "/"))
+		return strings.TrimPrefix(
+			uri,
+			strings.TrimRight(client.baseURL.Path, "/"),
+		)
 	}
 
+	interval := time.Millisecond * 50
 	for {
 		request, err := client.getRequest("GET", trim(task), nil)
 		if err != nil {
@@ -1279,7 +1334,7 @@ func (client *Client) waitAddonInstallation(task string) (string, error) {
 		}
 
 		if !status.Done {
-			time.Sleep(time.Millisecond * 100)
+			time.Sleep(interval)
 			continue
 		}
 
@@ -1299,7 +1354,12 @@ func (client *Client) waitAddonInstallation(task string) (string, error) {
 			Key string
 		}
 
-		_, body, err = consumeResponse(request)
+		statusCode, body, err := consumeResponse(request)
+		if statusCode == 404 {
+			time.Sleep(interval)
+			continue
+		}
+
 		if err != nil {
 			return "", err
 		}
@@ -1440,7 +1500,10 @@ func (client Client) putAddon(
 		return err
 	}
 
-	request.Header.Set("Content-Type", "application/vnd.atl.plugins.plugin+json")
+	request.Header.Set(
+		"Content-Type",
+		"application/vnd.atl.plugins.plugin+json",
+	)
 
 	response, err := httpClient.Do(request)
 	if err != nil {
@@ -1508,7 +1571,9 @@ func consumeResponse(req *http.Request) (int, []byte, error) {
 			for _, e := range errResponse.Errors {
 				messages = append(messages, e.Message)
 			}
-			return response.StatusCode, data, errors.New(strings.Join(messages, " "))
+			return response.StatusCode, data, errors.New(
+				strings.Join(messages, " "),
+			)
 		} else {
 			return response.StatusCode, nil, fmt.Errorf(
 				"status code: %d; unable to read error: %s",

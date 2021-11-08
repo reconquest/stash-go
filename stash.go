@@ -1308,7 +1308,12 @@ func (client *Client) waitAddonInstallation(task string) (string, error) {
 			return "", err
 		}
 
-		_, body, err := consumeResponse(request)
+		statusCode, body, err := consumeResponse(request)
+		if statusCode == 404 {
+			time.Sleep(interval)
+			continue
+		}
+
 		if err != nil {
 			return "", err
 		}
@@ -1354,7 +1359,7 @@ func (client *Client) waitAddonInstallation(task string) (string, error) {
 			Key string
 		}
 
-		statusCode, body, err := consumeResponse(request)
+		statusCode, body, err = consumeResponse(request)
 		if statusCode == 404 {
 			time.Sleep(interval)
 			continue
@@ -1552,14 +1557,19 @@ func IsRepositoryNotFound(err error) bool {
 }
 
 func consumeResponse(req *http.Request) (int, []byte, error) {
+	context := karma.Describe("url", req.URL.String())
+
 	response, err := httpClient.Do(req)
 	if err != nil {
-		return 0, nil, err
+		return 0, nil, context.Reason(err)
 	}
 
 	data, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return response.StatusCode, nil, err
+		return response.StatusCode, nil, context.Format(
+			err,
+			"read response body",
+		)
 	}
 
 	defer response.Body.Close()
@@ -1571,14 +1581,14 @@ func consumeResponse(req *http.Request) (int, []byte, error) {
 			for _, e := range errResponse.Errors {
 				messages = append(messages, e.Message)
 			}
-			return response.StatusCode, data, errors.New(
-				strings.Join(messages, " "),
+			return response.StatusCode, data, context.Reason(
+				errors.New(strings.Join(messages, " ")),
 			)
 		} else {
-			return response.StatusCode, nil, fmt.Errorf(
-				"status code: %d; unable to read error: %s",
-				response.StatusCode,
+			return response.StatusCode, nil, context.Format(
 				err,
+				"status code: %d; unable to read error body as JSON:",
+				response.StatusCode,
 			)
 		}
 	}

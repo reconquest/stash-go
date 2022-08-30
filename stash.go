@@ -85,6 +85,7 @@ type (
 		DisableAddon(upmToken string, addon Addon) error
 		SetAddonLicense(addon, license string) error
 		CreateUser(name, password, displayName, email string) (User, error)
+		GetCluster() (Cluster, error)
 		GrantRepositoryUserPermission(
 			projectKey, repositorySlug, user, permission string,
 		) error
@@ -199,6 +200,19 @@ type (
 		UpdatedDate int64      `            json:"updatedDate"`
 		Reviewers   []Reviewer `            json:"reviewers"`
 		Author      Author     `            json:"author"`
+	}
+
+	Cluster struct {
+		LocalNode ClusterNode   `json:"localNode"`
+		Running   bool          `json:"running"`
+		Nodes     []ClusterNode `json:"nodes"`
+	}
+
+	ClusterNode struct {
+		Name         string `json:"name"`
+		ID           string `json:"id"`
+		BuildVersion string `json:"buildVersion"`
+		Local        bool   `json:"local"`
 	}
 
 	Comment struct {
@@ -442,6 +456,25 @@ func (client Client) CreateUser(
 		DisplayName: displayName,
 		Email:       email,
 	}, nil
+}
+
+func (client Client) GetCluster() (Cluster, error) {
+	data, err := client.request(
+		"GET", "/rest/api/1.0/admin/cluster",
+		nil,
+		http.StatusOK,
+	)
+	if err != nil {
+		return Cluster{}, err
+	}
+
+	var response Cluster
+	err = json.Unmarshal(data, &response)
+	if err != nil {
+		return Cluster{}, err
+	}
+
+	return response, nil
 }
 
 func (client Client) MoveRepository(

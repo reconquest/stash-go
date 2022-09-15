@@ -85,6 +85,9 @@ type (
 		DisableAddon(upmToken string, addon Addon) error
 		SetAddonLicense(addon, license string) error
 		CreateUser(name, password, displayName, email string) (User, error)
+		UpdateGitMeshSettings(settings GitMeshSettings) error
+		CreateMeshNode(address string) (MeshNode, error)
+		GetMeshNodes() ([]MeshNode, error)
 		GetCluster() (Cluster, error)
 		GrantRepositoryUserPermission(
 			projectKey, repositorySlug, user, permission string,
@@ -213,6 +216,18 @@ type (
 		ID           string `json:"id"`
 		BuildVersion string `json:"buildVersion"`
 		Local        bool   `json:"local"`
+	}
+
+	GitMeshSettings struct {
+		IsRefreshing              bool `json:"isRefreshing"`
+		RepositoryCreationEnabled bool `json:"repositoryCreationEnabled"`
+	}
+
+	MeshNode struct {
+		ID      int    `json:"id"`
+		Name    string `json:"name"`
+		RPCURL  string `json:"rpcUrl"`
+		Offline bool   `json:"offline"`
 	}
 
 	Comment struct {
@@ -456,6 +471,61 @@ func (client Client) CreateUser(
 		DisplayName: displayName,
 		Email:       email,
 	}, nil
+}
+
+func (client Client) UpdateGitMeshSettings(settings GitMeshSettings) error {
+	_, err := client.request(
+		"PUT", "/rest/ui/latest/admin/git/mesh/settings",
+		settings,
+		http.StatusOK,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (client Client) CreateMeshNode(
+	address string,
+) (MeshNode, error) {
+	data, err := client.request(
+		"POST", "/rest/api/latest/admin/git/mesh/nodes",
+		struct {
+			RPCURL string `json:"rpcUrl"`
+		}{address},
+		http.StatusOK,
+	)
+	if err != nil {
+		return MeshNode{}, err
+	}
+
+	var response MeshNode
+	err = json.Unmarshal(data, &response)
+	if err != nil {
+		return MeshNode{}, err
+	}
+
+	return response, nil
+}
+
+func (client Client) GetMeshNodes() ([]MeshNode, error) {
+	data, err := client.request(
+		"GET", "/rest/api/latest/admin/git/mesh/nodes",
+		nil,
+		http.StatusOK,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var response []MeshNode
+	err = json.Unmarshal(data, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
 }
 
 func (client Client) GetCluster() (Cluster, error) {
@@ -933,11 +1003,11 @@ func (client Client) CreatePullRequest(
 	return response, nil
 }
 
-func (client *Client) getFullURL(url string) string {
+func (client Client) getFullURL(url string) string {
 	return strings.TrimRight(client.baseURL.String(), "/") + url
 }
 
-func (client *Client) getRequest(
+func (client Client) getRequest(
 	method, url string,
 	payload interface{},
 ) (*http.Request, error) {
@@ -974,7 +1044,7 @@ func (client *Client) getRequest(
 	return request, nil
 }
 
-func (client *Client) request(
+func (client Client) request(
 	method, url string, payload interface{}, statuses ...int,
 ) ([]byte, error) {
 	request, err := client.getRequest(method, url, payload)
@@ -1326,7 +1396,7 @@ func (client Client) InstallAddon(
 	return key, nil
 }
 
-func (client *Client) waitAddonInstallation(task string) (string, error) {
+func (client Client) waitAddonInstallation(task string) (string, error) {
 	trim := func(uri string) string {
 		return strings.TrimPrefix(
 			uri,

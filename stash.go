@@ -88,6 +88,7 @@ type (
 		UpdateGitMeshSettings(settings GitMeshSettings) error
 		CreateMeshNode(address string) (MeshNode, error)
 		GetMeshNodes() ([]MeshNode, error)
+		DeleteMeshNode(id int, force bool) error
 		GetCluster() (Cluster, error)
 		GrantRepositoryUserPermission(
 			projectKey, repositorySlug, user, permission string,
@@ -526,6 +527,20 @@ func (client Client) GetMeshNodes() ([]MeshNode, error) {
 	}
 
 	return response, nil
+}
+
+func (client Client) DeleteMeshNode(id int, force bool) error {
+	uri := fmt.Sprintf("/rest/api/latest/admin/git/mesh/nodes/%d", id)
+	if force {
+		uri += "?force=true"
+	}
+
+	_, err := client.request("GET", uri, nil, http.StatusOK)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (client Client) GetCluster() (Cluster, error) {

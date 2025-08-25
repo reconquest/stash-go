@@ -1,6 +1,6 @@
-module github.com/kovetskiy/stash
+module github.com/reconquest/stash-go
 
-go 1.17
+go 1.23
 
 require github.com/reconquest/karma-go v0.0.0-20200326104714-79480464fdb5
 
